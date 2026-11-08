@@ -14,8 +14,10 @@ Caso 08 — NYC 311. Pregunta: al ingresar una solicitud de la agencia HPD con c
 
 
 ## Entorno
-- Lenguaje: R versión 4.5.0.
-- Gestión de dependencias: `renv` versión 1.3.1 (ver `renv.lock`).
+- Lenguaje: R 4.6.2 (se exige R 4.6.x; `analisis.R` se detiene con otra versión).
+- Quarto 1.11.9 y una distribución LaTeX (`quarto install tinytex`).
+- Gestión de dependencias: `renv` 1.3.1; `renv.lock` fija 129 paquetes en
+  Posit Package Manager con fecha 2026-11-06, con binarios para Windows y Linux.
 - Paquetes principales usados:  `readr`, `dplyr`, `lubridate`, `tidymodels`,
   `ranger`, `xgboost`, `yardstick`, `probably`,
   `ggplot2`, `scales`, `quarto`
@@ -63,9 +65,22 @@ proyecto/
 - Toda transformación a los archivos originales se hace en `R/01_preparacion.R`.
 
 ## Instalación
-1. Clonar el repositorio.
-2. Abrir R en la raíz del proyecto.
-3. Ejecutar `renv::restore()`
+1. Instalar [R 4.6.2](https://cran.r-project.org/) y [Quarto](https://quarto.org/docs/get-started/).
+2. Clonar el repositorio. No editar `datos/caso08_nyc311.zip`: se verifica su MD5.
+3. Desde la raíz del proyecto, instalar paquetes y LaTeX:
+   ```bash
+   Rscript --vanilla instalar.R
+   quarto install tinytex
+   ```
+
+En Windows no se necesita Rtools y `datos.csv` se extrae solo. Si R no está en
+el PATH, usar la ruta completa, por ejemplo
+`"C:\Program Files\R\R-4.6.2\bin\Rscript.exe"`.
+
+`R/00_entorno.R` comprueba versión de R, paquetes, datos, Quarto y LaTeX antes
+de empezar, y fija el orden de texto, el generador aleatorio y los hilos de
+`xgboost` para que el resultado no dependa del idioma o de los núcleos del equipo.
+Entre sistemas operativos pueden aparecer diferencias numéricas mínimas.
 
 ## Ejecución
 ```r
