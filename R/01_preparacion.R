@@ -29,17 +29,24 @@ message("Duplicados por unique_key: ", auditoria_clave$duplicados)
 
 # --- 3. Parseo de fechas -----------------------------------------------
 # NYC 311 entrega created_date/closed_date en hora local de Nueva York.
+# read_csv ya las entrega como POSIXct (rotuladas UTC), por lo que basta
+# reasignar la zona horaria conservando la hora de reloj. Volver a pasarlas por
+# ymd_hms() las convierte a texto y pierde las fechas exactamente a medianoche.
+# Las horas inexistentes o repetidas por cambio de hora se resuelven de forma fija.
 datos <- datos_raw |>
   mutate(
-    created_date = ymd_hms(created_date, tz = "America/New_York"),
-    closed_date  = ymd_hms(closed_date,  tz = "America/New_York")
+    created_date = force_tz(created_date, "America/New_York", roll_dst = c("post", "pre")),
+    closed_date  = force_tz(closed_date,  "America/New_York", roll_dst = c("post", "pre"))
   )
 
 n_created_na <- sum(is.na(datos$created_date))
 message("created_date no parseable: ", n_created_na)
 
-# Hay un NA de fecha de created_date! Lo vamos a eliminar ya que es solamente un dato.
-# No es posible imputarlo.
+# Ninguna fecha presente en el archivo puede perderse al asignar la zona horaria.
+stopifnot(
+  "se perdió created_date al parsear" = sum(is.na(datos$created_date)) == sum(is.na(datos_raw$created_date)),
+  "se perdió closed_date al parsear"  = sum(is.na(datos$closed_date))  == sum(is.na(datos_raw$closed_date))
+)
 
 # --- 4. Construcción de la respuesta Y ---------------------------------
 # La escala será en horas. Entonces, 7 dias = 168 horas. 
@@ -72,9 +79,6 @@ auditoria_Y <- datos |>
   arrange(desc(n))
 print(auditoria_Y)
 
-# Y = 1; n = 99352 + 300 (58.2% + 0.18% = 58.38%)
-# Y = 0, n = 71155 (41.7%)
-
 # --- 5. Reglas de exclusión y base analítica ----------------------------
 # Se excluyen:
 #   - created_date no parseable
@@ -88,8 +92,6 @@ base <- datos |>
   filter(!is.na(Y))
 
 message("Base analítica: ", nrow(base), " filas (", round(100 * nrow(base) / nrow(datos), 2), "% de las leídas)")
-
-# En resumen, solamente se eliminó el NA que existía.
 
 # --- 6. Tabla de construcción de la muestra ----------------------------
 construccion <- tibble(
@@ -112,30 +114,31 @@ print(construccion)
 # --- 7. Tabla de variables: admisibles vs excluidas --------------------
 # Esto basado en el diccionario. Qué servirá como predictor y qué no.
 predictores <- tribble(
-  ~variable,                        ~rol,                 ~razon,
-  "unique_key",                     "identificador",      "ID único; no es predictor",
-  "closed_date",                    "excluida",           "define Y",
-  "status",                         "excluida",           "estado final, revela resultado",
-  "resolution_description",         "excluida",           "describe la resolución",
-  "resolution_action_updated_date", "excluida",           "actualización posterior al ingreso",
-  "due_date",                       "excluida",           "SLA interno que puede depender del resultado",
-  "created_date",                   "predictor (calendario)", "día de semana, mes, año, hora",
-  "open_data_channel_type",         "predictor",          "canal de ingreso",
-  "agency",                         "constante",          "HPD por construcción",
-  "complaint_type",                 "constante",          "PLUMBING por construcción",
-  "descriptor",                     "predictor",          "detalle del problema (agrupar raras)",
-  "location_type",                  "predictor",          "tipo de localización (agrupar raras)",
-  "facility_type",                  "predictor",          "tipo de facility si está disponible",
-  "borough",                        "predictor",          "borough reportado",
-  "community_board",                "predictor",          "distrito comunitario",
-  "council_district",               "predictor",          "distrito municipal",
-  "police_precinct",                "predictor",          "precinto policial",
-  "incident_zip",                   "predictor",          "código postal (agrupar raras)",
-  "incident_address",               "solo agrupación",    "no usar como predictor",
-  "street_name",                    "solo agrupación",    "no usar como predictor",
-  "bbl",                            "solo agrupación",    "identificador de edificio; útil para historial o bootstrap",
-  "latitude",                       "solo agrupación",    "usar sólo para agrupar o mapas",
-  "longitude",                      "solo agrupación",    "usar sólo para agrupar o mapas"
+  ~variable,                        ~interpretacion,                  ~tipo,        ~disponibilidad,        ~decision,                  ~razon,
+  "unique_key",                     "ID de la solicitud",             "texto",      "al ingreso",           "excluida (identificador)", "no es predictor",
+  "closed_date",                    "fecha de cierre",                "fecha",      "posterior",            "excluida (resultado)",     "define Y",
+  "status",                         "estado final",                   "categórica", "posterior",            "excluida (resultado)",     "revela el resultado",
+  "resolution_description",         "texto de resolución",            "texto",      "posterior",            "excluida (resultado)",     "describe el cierre",
+  "resolution_action_updated_date", "última actualización",           "fecha",      "posterior",            "excluida (resultado)",     "posterior al ingreso",
+  "due_date",                       "fecha comprometida",             "fecha",      "incierta",             "excluida",                 "SLA interno; sin registro de cuándo se fija",
+  "created_date",                   "fecha de ingreso",               "fecha",      "al ingreso",           "incluida (derivadas)",     "mes, día de semana y hora; año excluido porque 2023 no se observa en entrenamiento",
+  "open_data_channel_type",         "canal de ingreso",               "categórica", "al ingreso",           "incluida",                 "atributo de ingreso",
+  "agency",                         "agencia",                        "categórica", "al ingreso",           "excluida (constante)",     "HPD por construcción",
+  "complaint_type",                 "tipo de problema",               "categórica", "al ingreso",           "excluida (constante)",     "PLUMBING por construcción",
+  "descriptor",                     "detalle del problema",           "categórica", "al ingreso (supuesto)", "incluida",                "se supone estable tras el ingreso",
+  "descriptor_2",                   "detalle adicional",              "categórica", "al ingreso (supuesto)", "incluida",                "se supone estable tras el ingreso; categorías raras agrupadas",
+  "location_type",                  "tipo de localización",           "categórica", "al ingreso",           "excluida (constante)",     "un solo nivel en la copia",
+  "facility_type",                  "tipo de instalación",            "categórica", "al ingreso",           "excluida (vacía)",         "100% faltante",
+  "borough",                        "condado",                        "categórica", "al ingreso (supuesto)", "incluida",                "ubicación agregada",
+  "community_board",                "distrito comunitario",           "categórica", "al ingreso (supuesto)", "incluida",                "ubicación agregada; categorías raras agrupadas",
+  "council_district",               "distrito municipal",             "categórica", "al ingreso (supuesto)", "incluida",                "ubicación agregada; categorías raras agrupadas",
+  "police_precinct",                "precinto policial",              "categórica", "al ingreso (supuesto)", "incluida",                "ubicación agregada; categorías raras agrupadas",
+  "incident_zip",                   "código postal",                  "categórica", "al ingreso (supuesto)", "incluida",                "ubicación agregada; categorías raras agrupadas",
+  "incident_address",               "dirección",                      "texto",      "al ingreso",           "excluida (identificador)", "no se usa ni publica",
+  "street_name",                    "calle",                          "texto",      "al ingreso",           "excluida (identificador)", "no se usa ni publica",
+  "bbl",                            "identificador de inmueble",      "texto",      "al ingreso",           "solo agrupación",          "historial de volumen, sensibilidad y bootstrap",
+  "latitude",                       "latitud",                        "numérica",   "al ingreso",           "excluida",                 "se usa ubicación agregada",
+  "longitude",                      "longitud",                       "numérica",   "al ingreso",           "excluida",                 "se usa ubicación agregada"
 )
 print(predictores)
 
