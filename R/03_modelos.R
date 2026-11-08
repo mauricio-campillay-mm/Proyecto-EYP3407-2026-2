@@ -8,7 +8,8 @@ suppressPackageStartupMessages({
 tidymodels_prefer(quiet = TRUE)
 set.seed(3407)
 
-N_HILOS <- min(8L, parallel::detectCores())
+# Número fijo: xgboost puede variar levemente según los hilos usados.
+N_HILOS <- 4L
 
 # --- 1. Datos de desarrollo y remuestreo temporal -----------------------
 filas_dev <- which(base_modelo$t_seg < as.numeric(inicio_reserva))

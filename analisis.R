@@ -3,6 +3,7 @@
 
 # --vanilla omite .Rprofile: renv debe activarse explícitamente.
 source("renv/activate.R")
+source("R/00_entorno.R")
 
 t0 <- Sys.time()
 set.seed(3407)

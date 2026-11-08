@@ -1,0 +1,9 @@
+# Mismos finales de línea en Windows, macOS y Linux
+* text=auto eol=lf
+*.bat text eol=crlf
+*.zip binary
+*.pdf binary
+*.png binary
+*.rds binary
+datos/*.csv -text
+datos/LEEME.txt -text
