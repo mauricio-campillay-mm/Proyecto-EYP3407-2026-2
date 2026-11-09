@@ -1,4 +1,12 @@
 # 02_particiones.R — predictores de ingreso, historial sin fuga y particiones temporales
+#
+# Entrada: output/datos_auditados.rds (creado por 01_preparacion.R).
+# Salida:  output/particiones.rds, output/tablas/particiones.csv y el diagrama temporal.
+# Deja en memoria, para los scripts siguientes: base_modelo, ventanas, final_reserva,
+# las listas de predictores y las funciones de métricas.
+#
+# Idea central: cada solicitud sólo puede usar información conocida al ingresar, y
+# cada entrenamiento sólo puede usar solicitudes cuya respuesta a 7 días ya se conocía.
 suppressPackageStartupMessages({
   library(dplyr)
   library(lubridate)
@@ -33,20 +41,31 @@ base_modelo <- base_auditada |>
 # Volumen: solicitudes creadas estrictamente antes de t (conocidas al ingreso).
 # Tasa: sólo solicitudes con horizonte de 7 días ya terminado en t
 # (created_date + 168 h <= t), como exige la ficha del caso.
+#
+# La función recibe las solicitudes de un mismo distrito y devuelve dos valores por fila.
+# findInterval(x, t) cuenta cuántos valores de t quedan a la izquierda de x, lo que
+# permite contar solicitudes dentro de una ventana sin recorrer la base fila por fila.
+# Con left.open = TRUE cuenta los valores estrictamente menores que x.
 historial_grupo <- function(t, y) {
   # t debe venir ordenado de forma creciente
-  dia <- 86400
+  dia <- 86400   # segundos en un día
   antes        <- findInterval(t, t, left.open = TRUE)        # n creadas < t
   antes_7d     <- findInterval(t - 7 * dia, t, left.open = TRUE)
   vol_7d       <- antes - antes_7d
+  # Con la suma acumulada de Y, los casos de un tramo salen de restar dos posiciones.
+  # El tramo termina en t - 168 h: las solicitudes más recientes aún no tienen respuesta.
   acum         <- c(0, cumsum(y))
-  hasta        <- findInterval(t - HORIZONTE, t)              # horizonte terminado
+  hasta       <- findInterval(t - HORIZONTE, t)              # horizonte terminado
   desde        <- findInterval(t - HORIZONTE - 90 * dia, t, left.open = TRUE)
   n_90d        <- hasta - desde
   tasa_90d     <- ifelse(n_90d > 0, (acum[hasta + 1] - acum[desde + 1]) / n_90d, NA_real_)
   list(vol_7d = vol_7d, tasa_90d = tasa_90d)
 }
 
+# Tres variables de historial: volumen reciente del distrito, tasa reciente del
+# distrito sin cierre a 7 días y volumen reciente del mismo inmueble. El inmueble
+# sólo aporta volumen, porque una tasa con tan pocas solicitudes sería muy inestable.
+# Sin historial previo la tasa queda NA y se imputa dentro de la receta (03_modelos.R).
 base_modelo <- base_modelo |>
   group_by(community_board) |>
   mutate(
@@ -76,6 +95,8 @@ base_modelo <- base_modelo |>
 # --- 3. Particiones -----------------------------------------------------
 # Tres orígenes en 2022 con entrenamiento expansivo. Entrenamiento: creadas con
 # created_date + 168 h <= origen, de modo que su respuesta ya es conocida.
+# Las solicitudes de los 7 días previos al origen no se usan en esa ventana: al llegar
+# el origen su respuesta todavía no se conocería. Devuelve posiciones de filas en base_modelo.
 crear_particion <- function(origen, fin) {
   list(
     origen  = origen,
@@ -163,10 +184,14 @@ fig_diagrama <- ggplot(diagrama, aes(y = fila, yend = fila, x = ini, xend = fin,
 ggsave("output/figuras/diagrama_temporal.png", fig_diagrama, width = 7, height = 2.6, dpi = 200)
 
 # --- 5. Funciones comunes de evaluación ---------------------------------
+# Se calculan a mano para aplicar exactamente la misma fórmula a todos los modelos.
+# Pérdida logarítmica por fila (métrica principal). Menor es mejor. p se acota para
+# evitar log(0) cuando un modelo predice exactamente 0 o 1.
 log_loss_vec <- function(y, p) {
   p <- pmin(pmax(p, 1e-15), 1 - 1e-15)
   -(y * log(p) + (1 - y) * log(1 - p))
 }
+# AUC por rangos: probabilidad de que un caso Y = 1 reciba mayor p que uno Y = 0.
 auc_vec <- function(y, p) {
   n1 <- sum(y == 1); n0 <- sum(y == 0)
   (sum(rank(p)[y == 1]) - n1 * (n1 + 1) / 2) / (n1 * n0)
@@ -179,6 +204,7 @@ metricas <- function(y, p) {
     auc = if (length(unique(p)) > 1) auc_vec(y, p) else 0.5
   )
 }
+# Matriz de confusión y sus resúmenes: "positivo" significa predecir sin cierre a 7 días.
 metricas_umbral <- function(y, p, umbral) {
   pos <- p >= umbral
   tp <- sum(pos & y == 1); fp <- sum(pos & y == 0)

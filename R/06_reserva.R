@@ -1,5 +1,11 @@
 # 06_reserva.R — evaluación final única en la reserva 2023
 # Modelos, hiperparámetros, regla de selección y umbral vienen fijados de desarrollo.
+#
+# Aquí no se elige nada: se reajusta con los datos permitidos, se predice 2023 y se informa.
+# Los resultados no deben usarse para cambiar modelos, variables o umbrales. Si se
+# corrige un error después de ver estos resultados, el informe debe explicarlo (§4.1).
+# Salidas: comparacion_reserva.csv, matriz de confusión, calibración, incertidumbre,
+# errores por subgrupo, extremos y figuras de calibración y diagnóstico.
 suppressPackageStartupMessages({
   library(tidymodels)
   library(dplyr)
@@ -88,6 +94,8 @@ ggsave("output/figuras/calibracion.png", fig_calib, width = 4.2, height = 4.2, d
 B <- 2000
 perdida_dif <- log_loss_vec(y_prueba, p_elegido) - log_loss_vec(y_prueba, p_ref)
 
+# Se remuestrean unidades completas, no filas, porque las solicitudes de un mismo
+# inmueble o distrito no son independientes. Basta con sumar las pérdidas por unidad.
 bootstrap_cluster <- function(valores, cluster, B) {
   g <- match(cluster, unique(cluster))
   sumas <- as.numeric(rowsum(valores, g)); ns <- as.numeric(rowsum(rep(1, length(g)), g))

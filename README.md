@@ -27,17 +27,20 @@ Caso 08 — NYC 311. Pregunta: al ingresar una solicitud de la agencia HPD con c
 ```text
 proyecto/
 │
+├── instalar.R                      # instala las versiones exactas de renv.lock
 ├── analisis.R                      # punto de entrada único (ejecuta y genera todo)
 ├── README.md
 ├── renv.lock                       # versiones exactas de paquetes
 ├── informe.qmd                     # fuente del informe (genera informe.pdf)
 │
 ├── R/                              
+│   ├── 00_entorno.R                # verifica entorno y datos; fija opciones deterministas
 │   ├── 01_preparacion.R            # auditoría, construcción de Y, base analítica
 │   ├── 02_particiones.R            # desarrollo/prueba, ventanas temporales
 │   ├── 03_modelos.R                # referencia, M1, M2, M3
 │   ├── 04_evaluacion.R             # métricas, comparación, incertidumbre
-│   └── 05_diagnostico.R            # errores por subgrupo, sensibilidades
+│   ├── 05_diagnostico.R            # sensibilidades y estabilidad en desarrollo
+│   └── 06_reserva.R                # evaluación única 2023, incertidumbre, errores por subgrupo
 │
 ├── datos/
 │   ├── caso08_nyc311.zip           # paquete original sin editar
@@ -91,8 +94,8 @@ diagnóstico y la generación de `informe.pdf`, tablas y figuras.
 
 ## Reproducibilidad y costo
 - Semilla fija: `set.seed(3407)` en `analisis.R`.
-- Tiempo aproximado de ejecución: <XX> min.
-- Sistema de referencia: <Windows, R 4.5.0>.
+- Tiempo aproximado de ejecución: 19 min, con 4 hilos para `xgboost`.
+- Sistema de referencia: Windows 11 x64, R 4.6.2, 16 GB de RAM.
 - La sesión completa queda registrada en `output/sessionInfo.txt`.
 
 ## Prueba desde una copia limpia

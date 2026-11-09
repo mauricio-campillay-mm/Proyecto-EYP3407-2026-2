@@ -1,4 +1,8 @@
 # 04_evaluacion.R — comparación en desarrollo, regla de selección y umbral
+#
+# Reúne las predicciones de validación, compara modelos sobre las mismas filas, elige
+# un modelo y fija su umbral. Todo ocurre antes de examinar la reserva 2023.
+# Requiere 02 y 03. Salidas: comparacion_desarrollo.csv, seleccion.csv, seleccion.rds.
 suppressPackageStartupMessages({
   library(dplyr)
   library(tidyr)
@@ -11,7 +15,7 @@ pred_ref <- bind_rows(lapply(names(ventanas), function(n) {
   v <- ventanas[[n]]
   tibble(
     ventana = n, fila = v$valida, modelo = "Referencia: tasa histórica",
-    p = mean(dev_y <- base_modelo$Y[v$entrena])
+    p = mean(base_modelo$Y[v$entrena])
   )
 }))
 
@@ -34,6 +38,8 @@ por_ventana <- pred_validacion |>
   ungroup()
 write_csv(por_ventana, "output/tablas/desarrollo_por_ventana.csv")
 
+# dif_vs_ref < 0 significa que el modelo mejora a la referencia. dif_min y dif_max
+# muestran la variación entre ventanas, que no es un intervalo de confianza.
 ll_ref_ventana <- por_ventana |>
   filter(startsWith(modelo, "Referencia")) |>
   select(ventana, ll_ref = log_loss)
@@ -73,6 +79,8 @@ clave_elegido <- names(familias)[sapply(familias, function(f) f$nombre) == model
 message("Modelo elegido en desarrollo: ", modelo_elegido)
 
 # --- 4. Umbral fijado en desarrollo (Youden sobre validación agrupada) ---
+# El índice de Youden (sensibilidad + especificidad - 1) da igual peso a ambos errores.
+# Se evalúa en los percentiles 2 a 98 de p para no elegir cortes con casi ningún caso.
 umbral_youden <- function(y, p) {
   cortes <- quantile(p, probs = seq(0.02, 0.98, by = 0.01), names = FALSE) |> unique()
   j <- sapply(cortes, function(u) {

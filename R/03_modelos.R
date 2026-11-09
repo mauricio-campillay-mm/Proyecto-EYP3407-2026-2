@@ -1,4 +1,9 @@
 # 03_modelos.R — ajuste y selección de hiperparámetros en desarrollo (2021-2022)
+#
+# Compara tres familias sobre las mismas tres ventanas temporales y elige, dentro de
+# cada una, la configuración con menor log-loss medio. No toca la reserva 2023.
+# Requiere lo creado por 02_particiones.R. Deja en memoria: dev, remuestreo, familias,
+# crear_receta() y resultados_ajuste. Salidas: hiperparametros.csv y grillas_log_loss.csv.
 suppressPackageStartupMessages({
   library(tidymodels)
   library(glmnet)
@@ -26,6 +31,11 @@ remuestreo <- manual_rset(
 )
 
 # --- 2. Preprocesamiento: se estima dentro del entrenamiento de cada ventana ----
+# Pasos, en orden: nivel para categorías no vistas; nivel para faltantes; agrupar
+# categorías con menos de 0.5% de las filas; imputar numéricas con la mediana;
+# variables indicadoras; eliminar columnas constantes. Como la receta se estima con
+# el entrenamiento de cada ventana, la validación no influye en ninguno de estos pasos.
+# Sólo la regresión penalizada normaliza: la penalización depende de la escala.
 crear_receta <- function(datos, predictores, normalizar = FALSE) {
   rec <- recipe(datos[, c("Yf", predictores)]) |>
     update_role(all_of(predictores), new_role = "predictor") |>
@@ -41,13 +51,21 @@ crear_receta <- function(datos, predictores, normalizar = FALSE) {
 }
 
 # --- 3. Especificaciones (máximo 20 configuraciones por familia) --------
+# M1: logística con lasso (mixture = 1), que también puede descartar variables.
+# Se busca sólo la penalización, en escala logarítmica.
 espec_m1 <- logistic_reg(penalty = tune(), mixture = 1) |> set_engine("glmnet")
 grilla_m1 <- tibble(penalty = 10^seq(-5, -1, length.out = 20))
 
+# M2: árbol podado. cost_complexity controla la poda: valores altos dan árboles chicos.
+# min_n evita hojas con muy pocas solicitudes.
 espec_m2 <- decision_tree(cost_complexity = tune(), min_n = 50, tree_depth = 30) |>
-  set_engine("rpart") |> set_mode("classification")
+  # xval = 0: la poda se elige con las ventanas temporales, no con la validación interna de rpart.
+  set_engine("rpart", xval = 0) |> set_mode("classification")
 grilla_m2 <- tibble(cost_complexity = 10^seq(-5, -2, length.out = 20))
 
+# M3: boosting de árboles. Se buscan número de árboles, profundidad, tasa de aprendizaje
+# y tamaño mínimo de nodo; cada árbol usa 80% de filas y de columnas para reducir sobreajuste.
+# La grilla cubre el espacio de forma pareja con 20 configuraciones.
 espec_m3 <- boost_tree(
   trees = tune(), tree_depth = tune(), learn_rate = tune(), min_n = tune(),
   mtry = 0.8, sample_size = 0.8
@@ -79,6 +97,8 @@ resultados_ajuste <- lapply(names(familias), function(m) {
     add_recipe(crear_receta(dev, predictores_modelo, f$normalizar)) |>
     add_model(f$espec)
   t_ini <- Sys.time()
+  # Cada configuración se ajusta en las tres ventanas; save_pred guarda las predicciones
+  # de validación que 04_evaluacion.R usa para comparar modelos y fijar el umbral.
   res <- tune_grid(
     flujo, resamples = remuestreo, grid = f$grilla, metrics = metricas_ajuste,
     control = control_grid(save_pred = TRUE, verbose = FALSE)

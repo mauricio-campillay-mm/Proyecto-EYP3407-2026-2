@@ -1,4 +1,8 @@
 # 05_diagnostico.R — análisis de sensibilidad y estabilidad, sólo con desarrollo (2021-2022)
+#
+# Pregunta: ¿cambia la conclusión si se modifica una decisión del análisis?
+# Los hiperparámetros quedan fijos en los elegidos por 03_modelos.R, de modo que cada
+# diferencia proviene de la decisión modificada. Salidas: sensibilidad.csv y estabilidad_borough.
 suppressPackageStartupMessages({
   library(tidymodels)
   library(dplyr)
@@ -8,6 +12,8 @@ tidymodels_prefer(quiet = TRUE)
 set.seed(3407)
 
 # Reajusta una familia con sus hiperparámetros ya elegidos, ventana por ventana.
+# 'predictores' define la información usada; 'conservar' limita las filas de entrenamiento
+# y validación. La referencia se recalcula con las mismas filas de cada escenario.
 evaluar_escenario <- function(escenario, predictores, conservar = NULL) {
   bind_rows(lapply(names(familias), function(m) {
     f <- familias[[m]]
@@ -49,7 +55,7 @@ repetidas <- base_modelo |>
   mutate(fila = row_number()) |>
   filter(fila %in% filas_dev) |>
   group_by(bbl, descriptor) |>
-  mutate(repetida = !is.na(bbl) & !is.na(lag(t_seg)) & (t_seg - lag(t_seg)) <= 7 * 86400) |>
+  mutate(repetida = !is.na(bbl) & !is.na(dplyr::lag(t_seg)) & (t_seg - dplyr::lag(t_seg)) <= 7 * 86400) |>
   ungroup()
 filas_sin_repetidas <- repetidas$fila[!repetidas$repetida]
 pct_repetidas <- 100 * mean(repetidas$repetida)
