@@ -10,18 +10,32 @@ options(digits = 7, OutDec = ".", scipen = 0, stringsAsFactors = FALSE, warn = 1
 # --- 2. Versión de R ------------------------------------------------------
 version_lock <- renv::lockfile_read("renv.lock")$R$Version
 mm <- function(v) paste(strsplit(as.character(v), ".", fixed = TRUE)[[1]][1:2], collapse = ".")
+# Otra versión no impide ejecutar, pero las cifras podrían diferir levemente del informe.
 if (mm(getRversion()) != mm(version_lock)) {
-  stop(
-    "Este proyecto requiere R ", mm(version_lock), ".x y se está usando R ", getRversion(), ".\n",
-    "Instale R ", version_lock, " desde https://cran.r-project.org/ y vuelva a ejecutar.",
-    call. = FALSE
+  warning(
+    "El informe se generó con R ", version_lock, " y se está usando R ", getRversion(), ".\n",
+    "La ejecución continúa, pero los resultados podrían diferir levemente.",
+    call. = FALSE, immediate. = TRUE
   )
 }
 
 # --- 3. Paquetes ----------------------------------------------------------
-estado <- suppressMessages(renv::status(dev = FALSE))
-if (!isTRUE(estado$synchronized)) {
-  stop("Los paquetes no coinciden con renv.lock. Ejecute primero: Rscript --vanilla instalar.R", call. = FALSE)
+# Se comparan las versiones directamente: renv::status() también marcaría como
+# desincronizado el proyecto por usar otra versión de R, que aquí sólo genera un aviso.
+paquetes_lock <- vapply(renv::lockfile_read("renv.lock")$Packages, `[[`, character(1), "Version")
+version_instalada <- function(p) {
+  tryCatch(as.character(utils::packageVersion(p)), error = function(e) NA_character_)
+}
+instalados <- vapply(names(paquetes_lock), version_instalada, character(1))
+# Se comparan como versiones, no como texto: "7.3-65" equivale a "7.3.65".
+coincide <- mapply(function(i, l) !is.na(i) && package_version(i) == package_version(l),
+                   instalados, paquetes_lock)
+distintos <- names(paquetes_lock)[!coincide]
+if (length(distintos) > 0) {
+  stop(
+    "Paquetes faltantes o con otra versión: ", paste(utils::head(distintos, 10), collapse = ", "),
+    ".\nEjecute primero: Rscript --vanilla instalar.R", call. = FALSE
+  )
 }
 
 # --- 4. Datos -------------------------------------------------------------
@@ -42,5 +56,5 @@ if (!hay_latex) stop("No se encontró LaTeX. Ejecute: quarto install tinytex", c
 # Quarto debe usar este mismo R aunque el equipo tenga varias versiones instaladas.
 Sys.setenv(QUARTO_R = R.home("bin"))
 
-message("Entorno verificado: R ", getRversion(), ", ", estado$library$Packages |> length(), " paquetes, Quarto ",
+message("Entorno verificado: R ", getRversion(), ", ", length(paquetes_lock), " paquetes, Quarto ",
         quarto::quarto_version())

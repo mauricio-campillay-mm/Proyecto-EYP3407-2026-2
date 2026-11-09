@@ -18,7 +18,7 @@ el cierre administrativo no equivale a resolución material y no se afirman efec
 
 
 ## Entorno
-- Lenguaje: R 4.6.2 (se exige R 4.6.x; `analisis.R` se detiene con otra versión).
+- Lenguaje: R 4.6.2 (recomendado; con otra versión `analisis.R` avisa y continúa).
 - Quarto 1.11.9 y una distribución LaTeX (`quarto install tinytex`).
 - Gestión de dependencias: `renv` 1.3.1; `renv.lock` fija 129 paquetes en
   Posit Package Manager con fecha 2026-11-06, con binarios para Windows y Linux.
