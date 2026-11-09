@@ -3,7 +3,7 @@
 ## Integrantes
 - Diego Barrios (@nickname1)
 - Renato Bazaes [@RenatoBazaesS](https://github.com/RenatoBazaesS)
-- Mauricio Campillay (@nickname3)
+- Mauricio Campillay [@mauricio-campillay-mm](https://github.com/mauricio-campillay-mm)
 - Bruno Zavala (@nickname4)
 
 ## Caso asignado
@@ -11,6 +11,10 @@ Caso 08 — NYC 311. Pregunta: al ingresar una solicitud de la agencia HPD con c
 ¿cuál es la probabilidad de que siga sin cierre administrativo al cumplirse 7 días?
 
 ## Contexto y finalidad
+Trabajo final de EYP3407. Estima, al ingreso de una solicitud de plomería a HPD, la
+probabilidad de que siga sin cierre administrativo a los 7 días, para apoyar la
+priorización del seguimiento. Es una evaluación retrospectiva con la copia entregada:
+el cierre administrativo no equivale a resolución material y no se afirman efectos causales.
 
 
 ## Entorno
@@ -111,10 +115,10 @@ diagnóstico y la generación de `informe.pdf`, tablas y figuras.
 - Bruno Zavala: <aporte>.
 
 ## Declaración de uso de IA
-- Herramienta y fecha: <XX>.
-- Propósito: <XX>.
-- Partes afectadas: <archivos o secciones>.
-- Comprobaciones realizadas: <ejecución completa, revisión manual, verificación de resultados>.
+- Herramienta y fecha: Claude Code (modelo Claude Opus 5.5), 8 de noviembre de 2026. <agregar otras herramientas usadas por el equipo>.
+- Propósito: programación, depuración, entorno reproducible y borrador de secciones descriptivas y diapositivas.
+- Partes afectadas: `analisis.R`, `instalar.R`, `R/00_entorno.R` a `R/06_reserva.R`, `informe.qmd`, `presentacion.qmd` y este archivo.
+- Comprobaciones realizadas: ejecución completa desde un clon limpio. <agregar la revisión manual y verificación hecha por el equipo>.
 
 ## Referencias
 - NYC Open Data. *311 Service Requests from 2020 to Present*. ID erm2-nwe9.

@@ -53,6 +53,8 @@ miles <- function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = 
 construccion <- leer("construccion_muestra.csv")
 variables    <- leer("variables.csv")
 auditoria_Y  <- leer("auditoria_Y.csv")
+calidad_fechas <- leer("calidad_fechas.csv")
+detalles_raros <- leer("detalles_raros_reserva.csv")
 calidad_na   <- leer("calidad_na.csv")
 cardinalidad <- leer("cardinalidad.csv")
 descripcion  <- leer("descripcion.csv")
@@ -110,6 +112,14 @@ copia: `agency = HPD`, `complaint_type = PLUMBING` y `created_date` entre 2021-0
 
 ## Construcción de la muestra
 
+```{r fig-muestra}
+#| fig-cap: "Diagrama de construcción de la muestra analítica, en número de solicitudes."
+#| fig-alt: "Flujo desde las filas del archivo hasta la base analítica y su división en desarrollo y reserva."
+#| out-width: 85%
+
+figura("diagrama_muestra.png")
+```
+
 ```{r tabla-construccion}
 #| tbl-cap: "Construcción de la muestra analítica."
 #| results: asis
@@ -131,6 +141,14 @@ Durante la auditoría se detectó y corrigió un error propio: al convertir las 
 marcadas exactamente a medianoche se perdían. Esto excluía 1 solicitud sin justificación y
 clasificaba 7 cierres como ausentes. Tras la corrección ninguna fecha presente en el
 archivo se pierde, y el código lo comprueba en cada ejecución.
+
+```{r tabla-calidad-fechas}
+#| tbl-cap: "Controles de calidad de fechas, informados por separado."
+
+if (!is.null(calidad_fechas)) {
+  calidad_fechas |> rename(Control = control) |> knitr::kable()
+}
+```
 
 ## Variables admisibles y excluidas
 
@@ -302,9 +320,9 @@ figura("calibracion.png")
 ## Incertidumbre
 
 Se estima la incertidumbre de la diferencia de pérdida logarítmica entre el modelo elegido y
-la referencia mediante bootstrap de 2.000 réplicas, remuestreando inmuebles completos y, por
-separado, distritos comunitarios, porque las solicitudes de una misma unidad no son
-independientes. Las predicciones permanecen fijas y el modelo no se reajusta: el intervalo es
+la referencia mediante bootstrap de 2.000 réplicas, remuestreando por separado inmuebles,
+distritos comunitarios, semanas y meses de ingreso, porque las solicitudes de una misma unidad
+o periodo no son independientes. Con sólo 12 meses, ese intervalo es aproximado. Las predicciones permanecen fijas y el modelo no se reajusta: el intervalo es
 condicional a los ajustes realizados y no incorpora la incertidumbre de selección y entrenamiento.
 
 ```{r tabla-incertidumbre}
@@ -523,7 +541,20 @@ if (!is.null(subgrupos)) {
 #| tbl-cap: "A.6c. Predicciones extremas en la reserva y tasa observada."
 
 if (!is.null(extremos_res)) {
-  extremos_res |> rename(Grupo = grupo, `Tasa observada` = tasa_observada) |> knitr::kable(digits = 3)
+  extremos_res |>
+    rename(Grupo = grupo, `Pred. media` = p_media, `Tasa observada` = tasa_observada) |>
+    knitr::kable(digits = 3)
+}
+```
+
+```{r anexo-raros}
+#| tbl-cap: "A.6e. Detalles poco frecuentes en la reserva (menos de 1% de las solicitudes)."
+
+if (!is.null(detalles_raros)) {
+  detalles_raros |>
+    select(Detalle = nivel, n, Prev. = prevalencia, `Pred. media` = p_media,
+           `Log-loss` = log_loss, `Dif. ref.` = dif_vs_ref) |>
+    knitr::kable(digits = 3)
 }
 ```
 

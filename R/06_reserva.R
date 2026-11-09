@@ -112,16 +112,29 @@ clave_bbl <- ifelse(is.na(base_modelo$bbl[prueba]),
 clave_cb <- as.character(base_modelo$community_board[prueba])
 clave_cb[is.na(clave_cb)] <- "faltante"
 
-set.seed(3407); boot_bbl <- bootstrap_cluster(perdida_dif, clave_bbl, B)
-set.seed(3407); boot_cb  <- bootstrap_cluster(perdida_dif, clave_cb, B)
-incertidumbre <- tibble(
-  unidad_remuestreada = c("Inmueble (bbl)", "Distrito comunitario"),
-  n_unidades = c(n_distinct(clave_bbl), n_distinct(clave_cb)),
-  replicas = B,
-  dif_log_loss = mean(perdida_dif),
-  ic95_inf = c(quantile(boot_bbl, 0.025), quantile(boot_cb, 0.025)),
-  ic95_sup = c(quantile(boot_bbl, 0.975), quantile(boot_cb, 0.975))
+# Bloques temporales: también dependen entre sí las solicitudes de un mismo periodo.
+# Con sólo 12 meses el intervalo es aproximado; las semanas dan más bloques.
+clave_semana <- format(base_modelo$created_date[prueba], "%G-%V")
+clave_mes    <- format(base_modelo$created_date[prueba], "%Y-%m")
+
+unidades <- list(
+  "Inmueble (bbl)" = clave_bbl,
+  "Distrito comunitario" = clave_cb,
+  "Semana de ingreso" = clave_semana,
+  "Mes de ingreso" = clave_mes
 )
+incertidumbre <- bind_rows(lapply(names(unidades), function(u) {
+  set.seed(3407)
+  boot <- bootstrap_cluster(perdida_dif, unidades[[u]], B)
+  tibble(
+    unidad_remuestreada = u,
+    n_unidades = n_distinct(unidades[[u]]),
+    replicas = B,
+    dif_log_loss = mean(perdida_dif),
+    ic95_inf = unname(quantile(boot, 0.025)),
+    ic95_sup = unname(quantile(boot, 0.975))
+  )
+}))
 print(incertidumbre)
 write_csv(incertidumbre, "output/tablas/incertidumbre_reserva.csv")
 
@@ -176,11 +189,31 @@ extremos <- detalle |>
   filter(!is.na(tipo)) |>
   count(tipo, descriptor, name = "n") |>
   arrange(tipo, desc(n))
-extremos_resumen <- tibble(
-  grupo = c("p >= 0.9", "p <= 0.1"),
-  n = c(sum(p_elegido >= 0.9), sum(p_elegido <= 0.1)),
-  tasa_observada = c(mean(y_prueba[p_elegido >= 0.9]), mean(y_prueba[p_elegido <= 0.1]))
+# Se compara lo predicho con lo observado en las colas de la distribución de p.
+corte_alto <- unname(quantile(p_elegido, 0.99))
+corte_bajo <- unname(quantile(p_elegido, 0.01))
+resumir_cola <- function(nombre, filas) {
+  tibble(
+    grupo = nombre, n = sum(filas),
+    p_media = if (any(filas)) mean(p_elegido[filas]) else NA_real_,
+    tasa_observada = if (any(filas)) mean(y_prueba[filas]) else NA_real_
+  )
+}
+extremos_resumen <- bind_rows(
+  resumir_cola("1% con mayor probabilidad", p_elegido >= corte_alto),
+  resumir_cola("1% con menor probabilidad", p_elegido <= corte_bajo),
+  resumir_cola("p >= 0,9", p_elegido >= 0.9),
+  resumir_cola("p <= 0,1", p_elegido <= 0.1)
 )
 print(extremos_resumen)
 write_csv(extremos, "output/tablas/extremos_reserva.csv")
 write_csv(extremos_resumen, "output/tablas/extremos_resumen_reserva.csv")
+
+# Detalles poco frecuentes: menos de 1% de la reserva. Con pocos casos, el error
+# del modelo se estima con poca precisión y la recomendación es menos confiable.
+detalles_raros <- subgrupos |>
+  filter(grupo == "descriptor", n < 0.01 * length(prueba)) |>
+  select(-grupo) |>
+  arrange(n)
+print(detalles_raros)
+write_csv(detalles_raros, "output/tablas/detalles_raros_reserva.csv")

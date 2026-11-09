@@ -4,6 +4,7 @@ suppressPackageStartupMessages({
   library(lubridate)
   library(tidyr)
   library(stringr)
+  library(ggplot2)
 })
 
 ruta_csv <- "datos/datos.csv"
@@ -111,6 +112,28 @@ construccion <- tibble(
   mutate(pct_del_total = round(100 * n / nrow(datos), 2))
 print(construccion)
 
+# Calidad de fechas, informada por separado como pide la ficha del caso.
+fecha_extraccion <- as.POSIXct("2026-10-12", tz = "America/New_York")
+calidad_fechas <- tibble(
+  control = c(
+    "created_date ausente o no interpretable (excluida)",
+    "Cierre anterior a la creación (excluida)",
+    "Sin cierre registrado (se conserva, Y = 1)",
+    "Cierre exactamente a medianoche (se conserva)",
+    "Cierre más de 365 días después de la creación (se conserva)",
+    "Menos de 7 días de seguimiento al extraer (excluiría)"
+  ),
+  n = c(
+    sum(is.na(datos$created_date)),
+    sum(datos$horas_cierre < 0, na.rm = TRUE),
+    sum(is.na(datos$closed_date)),
+    sum(format(datos_raw$closed_date, "%H:%M:%S") == "00:00:00", na.rm = TRUE),
+    sum(datos$horas_cierre > 365 * 24, na.rm = TRUE),
+    sum(datos$created_date + 168 * 3600 > fecha_extraccion, na.rm = TRUE)
+  )
+)
+print(calidad_fechas)
+
 # --- 7. Tabla de variables: admisibles vs excluidas --------------------
 # Esto basado en el diccionario. Qué servirá como predictor y qué no.
 predictores <- tribble(
@@ -209,6 +232,34 @@ write_csv(calidad,         "output/tablas/calidad_na.csv")
 write_csv(cardinalidad,    "output/tablas/cardinalidad.csv")
 write_csv(descripcion,     "output/tablas/descripcion.csv")
 write_csv(cobertura,       "output/tablas/cobertura_anio_borough.csv")
+write_csv(calidad_fechas,  "output/tablas/calidad_fechas.csv")
+
+# Diagrama de construcción de la muestra, con los conteos calculados arriba.
+fmt_n <- function(x) format(x, big.mark = ".", decimal.mark = ",", trim = TRUE)
+n_dev <- sum(year(base$created_date) < 2023)
+n_res <- sum(year(base$created_date) == 2023)
+cajas <- tibble(
+  x = c(0, 0, 0, -1.25, 1.25),
+  y = c(3, 2, 1, 0, 0),
+  texto = c(
+    paste0("Filas en datos.csv\nn = ", fmt_n(nrow(datos))),
+    paste0("Fecha de creación válida y duración no negativa\nexcluidas: ",
+           fmt_n(nrow(datos) - nrow(base))),
+    paste0("Base analítica\nn = ", fmt_n(nrow(base)), " · ",
+           fmt_n(sum(base$Y == 1)), " sin cierre a 7 días (Y = 1)"),
+    paste0("Desarrollo 2021-2022\nn = ", fmt_n(n_dev)),
+    paste0("Reserva 2023\nn = ", fmt_n(n_res))
+  )
+)
+flechas <- tibble(x = c(0, 0, 0, 0), xend = c(0, 0, -1.25, 1.25),
+                  y = c(2.72, 1.72, 0.72, 0.72), yend = c(2.28, 1.28, 0.28, 0.28))
+fig_muestra <- ggplot() +
+  geom_segment(data = flechas, aes(x, y, xend = xend, yend = yend),
+               arrow = arrow(length = unit(2, "mm")), colour = "grey40") +
+  geom_label(data = cajas, aes(x, y, label = texto), size = 3, label.size = 0.3) +
+  coord_cartesian(xlim = c(-2.4, 2.4), ylim = c(-0.4, 3.4)) +
+  theme_void()
+ggsave("output/figuras/diagrama_muestra.png", fig_muestra, width = 6.5, height = 3.2, dpi = 200)
 
 saveRDS(base, "output/datos_auditados.rds")
 message("Preparación lista: ", nrow(base), " filas en output/datos_auditados.rds")
