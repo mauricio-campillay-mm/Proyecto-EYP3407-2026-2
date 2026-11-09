@@ -103,10 +103,12 @@ diagnóstico y la generación de `informe.pdf`, tablas y figuras.
 - La sesión completa queda registrada en `output/sessionInfo.txt`.
 
 ## Prueba desde una copia limpia
-- Fecha:
-- Comando utilizado: `Rscript --vanilla analisis.R`
-- Resultado:
-- Sistema:
+- Fecha: 8 de noviembre de 2026.
+- Comando utilizado: `Rscript --vanilla instalar.R` y `Rscript --vanilla analisis.R`.
+- Resultado: ejecución completa en 19 min desde un clon limpio, con tablas de resultados
+  idénticas a una corrida anterior.
+- Sistema: Windows 11 x64, R 4.6.2, en el equipo de desarrollo.
+- Prueba en el computador de otro integrante: <fecha, sistema, comando y resultado>.
 
 ## Aportes del equipo
 - Diego Barrios: <aporte>.
