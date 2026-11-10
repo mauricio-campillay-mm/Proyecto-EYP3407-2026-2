@@ -21,7 +21,7 @@ Entornos probados:
 |---|---|---|
 | Windows 11 x64 | 4.6.2 | Instalación y análisis completos desde un clon limpio |
 | Windows 11 x64 | 4.4.1 | Análisis completo con aviso de versión; tablas idénticas a R 4.6.2 |
-| Ubuntu 24.04 y Windows (GitHub Actions) | 4.6.2 | Ver la pestaña *Actions* del repositorio |
+| Ubuntu 24.04 y Windows Server (GitHub Actions, equipos nuevos) | 4.6.2 | Instalación, análisis (~22-24 min) y PDF completos; 28 tablas idénticas a las publicadas |
 
 macOS no está probado. El repositorio de paquetes fijado no ofrece binarios para
 macOS, por lo que `renv` compilaría desde el código fuente: se necesitan las
