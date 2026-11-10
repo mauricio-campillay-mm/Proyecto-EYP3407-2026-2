@@ -1,0 +1,62 @@
+# Prueba de reproducibilidad en equipos nuevos de GitHub (Linux y Windows).
+# Instala todo desde cero, ejecuta el comando único y compara las tablas con las
+# guardadas en insumos_qmd.RData. Los PDF y tablas quedan como artefactos descargables.
+name: Reproducibilidad
+
+on:
+  push:
+    branches: [main, avance-fases-3-6]
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+jobs:
+  analisis:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar R 4.6.2
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.6.2"
+          use-public-rspm: true
+
+      - name: Instalar Quarto y TinyTeX
+        uses: quarto-dev/quarto-actions/setup@v2
+        with:
+          version: "1.11.9"
+          tinytex: true
+
+      - name: Guardar los resultados publicados como referencia
+        run: cp insumos_qmd.RData "$RUNNER_TEMP/referencia.RData"
+
+      - name: Instalar paquetes de renv.lock
+        run: Rscript --vanilla instalar.R
+
+      - name: Ejecutar el análisis completo
+        run: Rscript --vanilla analisis.R
+
+      - name: Comparar con los resultados publicados
+        run: Rscript --vanilla pruebas/comparar_resultados.R "$RUNNER_TEMP/referencia.RData" insumos_qmd.RData
+
+      - name: Guardar PDF y tablas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-${{ matrix.os }}
+          path: |
+            informe.pdf
+            presentacion.pdf
+            insumos_qmd.RData
+            output/tablas
+            output/sessionInfo.txt

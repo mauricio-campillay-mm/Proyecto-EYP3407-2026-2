@@ -1,3 +1,24 @@
+# 01_preparacion.R — auditoría de los datos y construcción de la base analítica
+#
+# Entrada: datos/caso08_nyc311.zip (copia entregada por el curso, sin editar).
+# Salidas:
+#   output/datos_auditados.rds   base analítica, una fila por solicitud (contiene direcciones)
+#   output/tablas/*.csv          auditoría de clave y respuesta, construcción de la muestra,
+#                                variables, faltantes, cardinalidad, descripción, cobertura
+#                                y calidad de fechas
+#   output/figuras/diagrama_muestra.png
+#
+# Pasos:
+#   1. Leer el archivo y el diccionario (se extraen del .zip si faltan).
+#   2. Comprobar que unique_key identifica una sola fila.
+#   3. Asignar la zona horaria de Nueva York a las fechas, sin perder ninguna.
+#   4. Construir Y: 1 si no hay cierre en 168 horas, 0 si lo hay. Una fecha de
+#      cierre ausente cuenta como no cierre; una duración negativa se excluye.
+#   5-6. Aplicar exclusiones y documentar cuántas filas quedan en cada paso.
+#   7. Clasificar cada variable según su disponibilidad al ingreso.
+#   8-9. Medir faltantes, cardinalidad y describir la muestra.
+#   10. Guardar tablas, figura y base.
+
 suppressPackageStartupMessages({
   library(readr)
   library(dplyr)
@@ -7,9 +28,11 @@ suppressPackageStartupMessages({
   library(ggplot2)
 })
 
+# --- 1. Lectura -----------------------------------------------------------
 ruta_csv <- "datos/datos.csv"
 if (!file.exists(ruta_csv)) {
-  utils::unzip("datos/caso08_nyc311.zip", exdir = "datos")
+  # Sólo se extrae datos.csv: diccionario.csv y LEEME.txt ya están en el repositorio.
+  utils::unzip("datos/caso08_nyc311.zip", files = "datos.csv", exdir = "datos")
 }
 datos_raw <- readr::read_csv(ruta_csv, show_col_types = FALSE)
 dic   <- readr::read_csv("datos/diccionario.csv", show_col_types = FALSE)
@@ -26,7 +49,7 @@ auditoria_clave <- tibble(
 )
 message("Duplicados por unique_key: ", auditoria_clave$duplicados)
 
-# No hay ID duplicados --> OK!
+# Resultado: no hay claves duplicadas, cada fila es una solicitud distinta.
 
 # --- 3. Parseo de fechas -----------------------------------------------
 # NYC 311 entrega created_date/closed_date en hora local de Nueva York.
@@ -50,9 +73,11 @@ stopifnot(
 )
 
 # --- 4. Construcción de la respuesta Y ---------------------------------
-# La escala será en horas. Entonces, 7 dias = 168 horas. 
-# Y = 1, si no cerró en menos de 168 horas.
-# Y = 0, si cerró antes de 168 horas.
+# Se mide en horas: el horizonte de 7 días equivale a 168 horas.
+# Y = 1 si no se registra cierre dentro de 168 horas desde la creación.
+# Y = 0 si el cierre ocurre dentro de ese plazo (incluido el límite).
+# Una fecha de cierre ausente es "sin cierre al corte" (Y = 1), no un dato faltante:
+# la ficha pide no eliminar las solicitudes abiertas.
 
 datos <- datos |>
   mutate(
@@ -135,7 +160,8 @@ calidad_fechas <- tibble(
 print(calidad_fechas)
 
 # --- 7. Tabla de variables: admisibles vs excluidas --------------------
-# Esto basado en el diccionario. Qué servirá como predictor y qué no.
+# Basada en el diccionario: interpretación, tipo, disponibilidad temporal y decisión
+# de cada variable. Sólo entra al modelo lo que se conoce al ingresar la solicitud.
 predictores <- tribble(
   ~variable,                        ~interpretacion,                  ~tipo,        ~disponibilidad,        ~decision,                  ~razon,
   "unique_key",                     "ID de la solicitud",             "texto",      "al ingreso",           "excluida (identificador)", "no es predictor",
@@ -177,9 +203,9 @@ calidad <- base |>
   arrange(desc(pct_na))
 print(calidad)
 
-# Realmente la variable de facility_type es 100% NA. Inútil.
-# council_district (23) e incident_zip (23) poseen un 0.01% de NA. Veremos que hacer con eso.
-# Podrían estar correlacionados: si no se sabe el distrito, implica que tampoco se sepa su codigo postal.
+# Resultado: facility_type está 100% vacía y se excluye. council_district e incident_zip
+# tienen 23 faltantes (0,01%), probablemente las mismas solicitudes; en el modelo reciben
+# un nivel "faltante" dentro de la receta (03_modelos.R), sin imputar valores.
 
 cardinalidad <- base |>
   summarise(across(
@@ -191,7 +217,8 @@ cardinalidad <- base |>
   arrange(desc(n_niveles))
 print(cardinalidad)
 
-# Varios codigos postal distintos (183), y otros más. 
+# Resultado: incident_zip tiene unos 180 niveles; las categorías poco frecuentes se
+# agrupan dentro de la receta de cada partición (umbral 0,5%).
 
 # --- 9. Descripción de la muestra --------------------------------------
 descripcion <- tibble(
@@ -256,7 +283,7 @@ flechas <- tibble(x = c(0, 0, 0, 0), xend = c(0, 0, -1.25, 1.25),
 fig_muestra <- ggplot() +
   geom_segment(data = flechas, aes(x, y, xend = xend, yend = yend),
                arrow = arrow(length = unit(2, "mm")), colour = "grey40") +
-  geom_label(data = cajas, aes(x, y, label = texto), size = 3, label.size = 0.3) +
+  geom_label(data = cajas, aes(x, y, label = texto), size = 3, linewidth = 0.3) +
   coord_cartesian(xlim = c(-2.4, 2.4), ylim = c(-0.4, 3.4)) +
   theme_void()
 ggsave("output/figuras/diagrama_muestra.png", fig_muestra, width = 6.5, height = 3.2, dpi = 200)

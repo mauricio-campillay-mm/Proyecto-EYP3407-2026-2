@@ -26,38 +26,49 @@ el cierre administrativo no equivale a resolución material y no se afirman efec
   `glmnet`, `rpart`, `xgboost`, `yardstick`, `patchwork`,
   `ggplot2`, `scales`, `quarto`
 
-## Estructura del proyecto (por ahora)
+## Estructura del proyecto
 
 ```text
 proyecto/
 │
+├── INSTALACION.md                  # requisitos, instalación, ejecución y problemas frecuentes
 ├── instalar.R                      # instala las versiones exactas de renv.lock
 ├── analisis.R                      # punto de entrada único (ejecuta y genera todo)
 ├── README.md
-├── renv.lock                       # versiones exactas de paquetes
-├── informe.qmd                     # fuente del informe (genera informe.pdf)
+├── renv.lock                       # versiones exactas de R y paquetes
+├── informe.qmd / informe.pdf       # informe (se genera con Quarto)
+├── presentacion.qmd / presentacion.pdf
+├── insumos_qmd.RData               # resultados para generar los documentos sin repetir el análisis
 │
-├── R/                              
+├── R/
 │   ├── 00_entorno.R                # verifica entorno y datos; fija opciones deterministas
 │   ├── 01_preparacion.R            # auditoría, construcción de Y, base analítica
-│   ├── 02_particiones.R            # desarrollo/prueba, ventanas temporales
-│   ├── 03_modelos.R                # referencia, M1, M2, M3
-│   ├── 04_evaluacion.R             # métricas, comparación, incertidumbre
+│   ├── 02_particiones.R            # predictores, historial sin fuga, ventanas temporales
+│   ├── 03_modelos.R                # M1, M2, M3 y búsqueda de hiperparámetros
+│   ├── 04_evaluacion.R             # comparación con la referencia, selección y umbral
 │   ├── 05_diagnostico.R            # sensibilidades y estabilidad en desarrollo
-│   └── 06_reserva.R                # evaluación única 2023, incertidumbre, errores por subgrupo
+│   ├── 06_reserva.R                # evaluación única 2023, incertidumbre, errores por subgrupo
+│   ├── 07_insumos_qmd.R            # guarda insumos_qmd.RData
+│   └── cargar_insumos.R            # restaura output/ desde insumos_qmd.RData
+│
+├── pruebas/
+│   └── comparar_resultados.R       # compara las tablas de dos ejecuciones
+├── .github/workflows/
+│   └── reproducibilidad.yml        # prueba automática en Linux y Windows (GitHub Actions)
 │
 ├── datos/
-│   ├── caso08_nyc311.zip           # paquete original sin editar
-│   ├── datos.csv                   # extraído del zip
-│   ├── diccionario.csv             # definiciones de variable
+│   ├── caso08_nyc311.zip           # paquete original sin editar (se verifica su MD5)
+│   ├── datos.csv                   # extraído del zip al ejecutar (no se versiona)
+│   ├── diccionario.csv             # definiciones de variables
 │   └── LEEME.txt                   # información de los datos
 │
 ├── docs/
 │   └── 00_definicion_problema.md
 │
-└── output/                         # se genera al ejecutar analisis.R
+└── output/                         # se genera al ejecutar analisis.R (no se versiona)
     ├── tablas/
     ├── figuras/
+    ├── *.rds                       # particiones, selección, predicciones y base analítica
     └── sessionInfo.txt
 ```
 
@@ -72,6 +83,8 @@ proyecto/
 - Toda transformación a los archivos originales se hace en `R/01_preparacion.R`.
 
 ## Instalación
+Guía completa, con requisitos, entornos probados y problemas frecuentes: [INSTALACION.md](INSTALACION.md).
+
 1. Instalar [R 4.6.2](https://cran.r-project.org/) y [Quarto](https://quarto.org/docs/get-started/).
 2. Clonar el repositorio. No editar `datos/caso08_nyc311.zip`: se verifica su MD5.
 3. Desde la raíz del proyecto, instalar paquetes y LaTeX:
