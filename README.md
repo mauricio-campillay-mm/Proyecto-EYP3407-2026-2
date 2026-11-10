@@ -32,6 +32,7 @@ el cierre administrativo no equivale a resolución material y no se afirman efec
 proyecto/
 │
 ├── INSTALACION.md                  # requisitos, instalación, ejecución y problemas frecuentes
+├── INSTRUCTIVO_QMD.md              # cómo generar y redactar los documentos sólo con insumos_qmd.RData
 ├── instalar.R                      # instala las versiones exactas de renv.lock
 ├── analisis.R                      # punto de entrada único (ejecuta y genera todo)
 ├── README.md
@@ -85,12 +86,14 @@ proyecto/
 ## Instalación
 Guía completa, con requisitos, entornos probados y problemas frecuentes: [INSTALACION.md](INSTALACION.md).
 
+Para redactar el informe o la presentación sin correr el análisis, siga [INSTRUCTIVO_QMD.md](INSTRUCTIVO_QMD.md).
+
 1. Instalar [R 4.6.2](https://cran.r-project.org/) y [Quarto](https://quarto.org/docs/get-started/).
 2. Clonar el repositorio. No editar `datos/caso08_nyc311.zip`: se verifica su MD5.
-3. Desde la raíz del proyecto, instalar paquetes y LaTeX:
+3. Desde la raíz del proyecto, instalar LaTeX y luego los paquetes (en ese orden):
    ```bash
-   Rscript --vanilla instalar.R
    quarto install tinytex
+   Rscript --vanilla instalar.R
    ```
 
 En Windows no se necesita Rtools y `datos.csv` se extrae solo. Si R no está en

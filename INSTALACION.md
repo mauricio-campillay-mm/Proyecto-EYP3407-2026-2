@@ -31,13 +31,13 @@ macOS, por lo que `renv` compilaría desde el código fuente: se necesitan las
 
 1. Instale [R](https://cran.r-project.org/) y [Quarto](https://quarto.org/docs/get-started/).
 2. Clone el repositorio (o descomprima la copia de la entrega) y abra una terminal en su raíz.
-3. Instale los paquetes con las versiones exactas:
-   ```bash
-   Rscript --vanilla instalar.R
-   ```
-4. Instale LaTeX, si no lo tiene:
+3. Instale LaTeX, si no lo tiene (antes del paso 4, que le agrega los paquetes necesarios):
    ```bash
    quarto install tinytex
+   ```
+4. Instale los paquetes de R con las versiones exactas y los paquetes de LaTeX de los documentos:
+   ```bash
+   Rscript --vanilla instalar.R
    ```
 
 En Windows, si `Rscript` no se reconoce, use la ruta completa, por ejemplo
