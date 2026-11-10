@@ -6,8 +6,6 @@ de modelos**. Todos los resultados (tablas, figuras y predicciones) vienen guard
 
 `insumos_qmd.RData` no contiene la base con direcciones: sólo resultados agregados.
 
----
-
 ## Paso 1. Instalar los programas (una sola vez, ~10 min)
 
 1. **R 4.6.2**: <https://cran.r-project.org/bin/windows/base/> (otra versión de R
@@ -28,7 +26,7 @@ la versión original (`main`) no sirve para esto.
 **Opción B, con Git:**
 
 ```bash
-git clone -b avance-fases-3-6 https://github.com/mauricio-campillay-mm/Proyecto-EYP3407-2026-2.git
+git clone -b avance-fases-3-6 https://github.com/mauricio-campillay-mm/Proyecto-EYP3407-2026-2
 ```
 
 Ambas opciones ya traen `insumos_qmd.RData` en la carpeta principal. Si un compañero
