@@ -109,5 +109,6 @@ error si alguna difiere en más de 0,000001.
 | `No se encontró Quarto` | Instale Quarto y abra una terminal nueva |
 | `No se encontró LaTeX` | `quarto install tinytex` |
 | `no coincide con la copia entregada (MD5 distinto)` | Reemplace `datos/caso08_nyc311.zip` por la copia original |
+| La generación del PDF queda detenida en `updating existing packages` | Faltan paquetes de LaTeX: vuelva a ejecutar `Rscript --vanilla instalar.R`, que los instala antes |
 | Error de Quarto al generar los PDF | Cierre cualquier vista previa de Quarto abierta (por ejemplo en VS Code) y repita |
 | Falta de memoria | Cierre otros programas; el análisis usa cerca de 2 GB |

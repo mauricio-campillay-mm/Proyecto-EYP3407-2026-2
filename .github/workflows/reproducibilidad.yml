@@ -40,10 +40,13 @@ jobs:
       - name: Guardar los resultados publicados como referencia
         run: cp insumos_qmd.RData "$RUNNER_TEMP/referencia.RData"
 
-      - name: Instalar paquetes de renv.lock
+      - name: Instalar paquetes de renv.lock y de LaTeX
+        timeout-minutes: 30
         run: Rscript --vanilla instalar.R
 
+      # Límite por paso: si algo se detiene, falla en minutos y no a las 2,5 h.
       - name: Ejecutar el análisis completo
+        timeout-minutes: 60
         run: Rscript --vanilla analisis.R
 
       - name: Comparar con los resultados publicados
