@@ -35,6 +35,9 @@ suppressPackageStartupMessages({
   library(knitr)
 })
 
+# Restaura los resultados desde insumos_qmd.RData si este equipo no ejecutó analisis.R.
+source("R/cargar_insumos.R")
+
 ruta_tablas  <- "output/tablas"
 ruta_figuras <- "output/figuras"
 
@@ -72,7 +75,9 @@ calib_res    <- leer("calibracion_resumen.csv")
 subgrupos    <- leer("errores_subgrupos_reserva.csv")
 extremos_res <- leer("extremos_resumen_reserva.csv")
 
-base <- readRDS("output/datos_auditados.rds")
+# Cifras descriptivas desde la tabla generada por 01_preparacion.R.
+desc <- if (is.null(descripcion)) list() else setNames(as.list(descripcion$valor), descripcion$metrica)
+fecha_desc <- function(x) format(as.Date(substr(x, 1, 10)), "%d/%m/%Y")
 ```
 
 # Resumen ejecutivo
@@ -168,14 +173,14 @@ la fuente publica su versión vigente. Se asume que se mantienen estables desde 
 ## Descripción de la muestra
 
 La base analítica contiene
-`r miles(nrow(base))`
+`r miles(as.numeric(desc$n_solicitudes))`
 solicitudes únicas, correspondientes a
-`r miles(n_distinct(base$bbl, na.rm = TRUE))`
+`r miles(as.numeric(desc$n_bbl_distintos))`
 inmuebles (`bbl`) distintos, con fechas de creación entre
-`r format(min(base$created_date, na.rm = TRUE), "%d/%m/%Y")` y
-`r format(max(base$created_date, na.rm = TRUE), "%d/%m/%Y")`.
+`r fecha_desc(desc$fecha_min)` y
+`r fecha_desc(desc$fecha_max)`.
 La prevalencia de la respuesta (sin cierre a 7 días) es
-`r sprintf("%.1f%%", 100 * mean(base$Y, na.rm = TRUE))`.
+`r sprintf("%.1f%%", 100 * as.numeric(desc$prevalencia_Y))`.
 
 El detalle de la auditoría de la respuesta, la distribución por año y borough, los valores
 faltantes y la cardinalidad de las categorías se reportan en el Anexo técnico.
@@ -406,7 +411,7 @@ Rscript --vanilla instalar.R
 Rscript --vanilla analisis.R
 ```
 
-- Lenguaje: R `r paste(R.version$major, R.version$minor, sep = ".")`.
+- Lenguaje: R `r if (file.exists("output/tablas/version_r_analisis.txt")) readLines("output/tablas/version_r_analisis.txt") else paste(R.version$major, R.version$minor, sep = ".")`.
 - Entorno: `renv` (ver `renv.lock`).
 - Entrada: `datos/caso08_nyc311.zip`, con verificación de MD5.
 - Sesión completa: `output/sessionInfo.txt`.

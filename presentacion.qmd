@@ -31,6 +31,8 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(knitr)
 })
+# Restaura los resultados desde insumos_qmd.RData si este equipo no ejecutó analisis.R.
+source("R/cargar_insumos.R")
 options(knitr.kable.NA = "—")
 leer <- function(a) read_csv(file.path("output/tablas", a), show_col_types = FALSE)
 
@@ -61,8 +63,9 @@ subg        <- leer("errores_subgrupos_reserva.csv")
 estab       <- leer("estabilidad_borough_desarrollo.csv")
 matriz      <- leer("matriz_confusion_reserva.csv")
 
-base <- readRDS("output/datos_auditados.rds")
-N <- nrow(base)
+descripcion <- leer("descripcion.csv")
+desc <- setNames(as.list(descripcion$valor), descripcion$metrica)
+N <- as.numeric(desc$n_solicitudes)
 elegido <- sel$modelo_elegido
 r_el  <- filter(reserva, modelo == elegido)
 d_el  <- filter(desarrollo, modelo == elegido)
@@ -88,8 +91,8 @@ s_val <- function(esc, mod) filter(sens, startsWith(escenario, esc), modelo == m
 
 ## De `r miles(N)` solicitudes a una respuesta auditada
 
-- `r miles(N)` solicitudes de `r miles(n_distinct(base$bbl, na.rm = TRUE))` inmuebles; ninguna fila excluida
-- **`r pct(mean(base$Y))`** sin cierre a 7 días
+- `r miles(N)` solicitudes de `r miles(as.numeric(desc$n_bbl_distintos))` inmuebles; ninguna fila excluida
+- **`r pct(as.numeric(desc$prevalencia_Y))`** sin cierre a 7 días
 - Solicitudes abiertas se conservan: `r miles(auditoria$n[auditoria$caso == "sin cierre registrado"])` sin cierre registrado cuentan como $Y = 1$
 - `closed_date`, `status` y campos de resolución quedan fuera: revelan el resultado
 

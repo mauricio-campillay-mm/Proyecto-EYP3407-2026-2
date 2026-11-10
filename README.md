@@ -23,7 +23,7 @@ el cierre administrativo no equivale a resolución material y no se afirman efec
 - Gestión de dependencias: `renv` 1.3.1; `renv.lock` fija 129 paquetes en
   Posit Package Manager con fecha 2026-11-06, con binarios para Windows y Linux.
 - Paquetes principales usados:  `readr`, `dplyr`, `lubridate`, `tidymodels`,
-  `ranger`, `xgboost`, `yardstick`, `probably`,
+  `glmnet`, `rpart`, `xgboost`, `yardstick`, `patchwork`,
   `ggplot2`, `scales`, `quarto`
 
 ## Estructura del proyecto (por ahora)
@@ -96,6 +96,18 @@ Rscript --vanilla analisis.R
 Este comando ejecuta preparación, particiones, ajuste, evaluación,
 diagnóstico y la generación de `informe.pdf`, tablas y figuras.
 
+### Generar sólo los documentos
+`insumos_qmd.RData` guarda las tablas y figuras de la última ejecución (sin la base con
+direcciones). Si `output/` no existe, `informe.qmd` y `presentacion.qmd` las restauran
+desde ese archivo, de modo que tras `instalar.R` basta con:
+
+```bash
+quarto render informe.qmd
+quarto render presentacion.qmd
+```
+
+Sirve para redactar; la reproducción completa sigue siendo `Rscript --vanilla analisis.R`.
+
 ## Reproducibilidad y costo
 - Semilla fija: `set.seed(3407)` en `analisis.R`.
 - Tiempo aproximado de ejecución: 19 min, con 4 hilos para `xgboost`.
@@ -108,6 +120,7 @@ diagnóstico y la generación de `informe.pdf`, tablas y figuras.
 - Resultado: ejecución completa en 19 min desde un clon limpio, con tablas de resultados
   idénticas a una corrida anterior.
 - Sistema: Windows 11 x64, R 4.6.2, en el equipo de desarrollo.
+- Prueba con R 4.4.1 en el mismo equipo: instalación y análisis completos sin error, con aviso de versión y tablas idénticas a las de R 4.6.2.
 - Prueba en el computador de otro integrante: <fecha, sistema, comando y resultado>.
 
 ## Aportes del equipo
