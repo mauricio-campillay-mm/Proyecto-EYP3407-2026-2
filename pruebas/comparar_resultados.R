@@ -8,6 +8,8 @@
 # su mayor diferencia absoluta. Se ignoran los tiempos de cómputo, que dependen del
 # equipo. Termina con error si alguna diferencia supera la tolerancia.
 
+# --vanilla omite .Rprofile: se activa renv para usar los paquetes del proyecto.
+source("renv/activate.R")
 suppressPackageStartupMessages(library(readr))
 argumentos <- commandArgs(trailingOnly = TRUE)
 if (length(argumentos) < 2) stop("Indique dos archivos .RData: referencia y nueva.", call. = FALSE)
