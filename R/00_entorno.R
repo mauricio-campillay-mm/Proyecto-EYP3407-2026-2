@@ -46,15 +46,5 @@ if (unname(tools::md5sum(ruta_zip)) != MD5_ZIP) {
   stop(ruta_zip, " no coincide con la copia entregada (MD5 distinto).", call. = FALSE)
 }
 
-# --- 5. Quarto y LaTeX ----------------------------------------------------
-if (is.null(quarto::quarto_path())) {
-  stop("No se encontró Quarto. Instálelo desde https://quarto.org/docs/get-started/", call. = FALSE)
-}
-hay_latex <- tinytex::is_tinytex() || nzchar(Sys.which("lualatex")) || nzchar(Sys.which("xelatex"))
-if (!hay_latex) stop("No se encontró LaTeX. Ejecute: quarto install tinytex", call. = FALSE)
-
-# Quarto debe usar este mismo R aunque el equipo tenga varias versiones instaladas.
-Sys.setenv(QUARTO_R = R.home("bin"))
-
-message("Entorno verificado: R ", getRversion(), ", ", length(paquetes_lock), " paquetes, Quarto ",
-        quarto::quarto_version())
+message("Entorno verificado: R ", getRversion(), ", ", length(paquetes_lock),
+        " paquetes y datos/caso08_nyc311.zip original.")
